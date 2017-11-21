@@ -7,11 +7,13 @@ from builtins import * # noqa
 from gmusicapi import Mobileclient
 from getpass import getpass
 
+import importlib
+
 import subprocess
 
 import codecs
 
-import urllib3
+import urllib2
 
 import vlc
 
@@ -19,6 +21,7 @@ import json
 
 import time
 
+import os
 
 # JSON attribute
 class D(dict):
@@ -106,14 +109,50 @@ def show_info(api):
 
 #find pics from google
 def find_art(song, missing):
-	if missing > 1:
-		print('Looking for Album image')
-		img_url=[]
-		url = "http://ajax.googleapis.com/ajax/services/search/images?q={0}&amp;v=1.0&amp;rsz=middle&amp;start={1}"
-		
+	gSearch = importlib.import_module("google-images-download")
+	if missing >= 2:
+		try:
+			urls = url_search(song.artist,n=5)
+			url_download(song.artist, urls)
+			missing -= 2
+		except:
+			print("Cannot find artist name.")
+	if missing >= 1:
+		try:
+			keyword = song.title+" "+song.artist
+			urls = url_search(keyword,n=5)
+			url_download(keyword, urls)
+			missing -= 1
+		except:
+			print("Cannot find song title.")
 
+def url_search(keyword, n):
+	img_url=[]
+	url = "http://ajax.googleapis.com/ajax/services/search/images?q={0}&amp;v=1.0&amp;rsz=middle&amp;start={1}"
+	for i in range((n/8)+1):
+		res = urllib2.urlopen(url.format(keyword,i*8))
+		data = json.load(res)
+		img_url += [result["url"] for result in data["responseData"]["results"]]
+	return img_url
 
+def url_download(keyword,urls):
+	print("Download start..")
+	# make directory to store image (if not exists)
+	if os.path.exists(keyword)==False
+		os.mkdir(keyword)
 
+	opener = urllib2.build_opener()
+
+	for i in range(len(set(urls))):
+		try:
+			fn, ext = os.path.splitext(urls[i])
+			req = urllib2.Request(urls[i], headers={"User-Agent" : "Magic Browser"})
+			img_file = open(keyword+"/"+str(i)+ext, "wb")
+			img_file.write(opener.open(req).read())
+			img_file.close()
+			print("DL Image Link:"+str(i+1))
+		except:
+			continue
 
 #print info
 def print_song_info(song, Art_Exists=True):
